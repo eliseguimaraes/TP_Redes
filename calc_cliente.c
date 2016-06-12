@@ -1,9 +1,11 @@
-#include<stdio.h> //printf
-#include<string.h> //memset
-#include<stdlib.h> //exit(0);
-#include<arpa/inet.h>
-#include<sys/socket.h>
-#include "calc_cliente.h"
+#include <stdio.h> //printf
+#include <string.h> //memset
+#include <stdlib.h> //exit(0);
+#include <arpa/inet.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <sys/types.h>
+#include <netdb.h>
 
 #define BUFLEN 512  //tamanho maximo do buffer
 #define PORT 8888
@@ -29,7 +31,10 @@ int main(int argc, char *argv[])
     double array[3];
     int intArray[2], x;
     int countArray[8];
-
+    int numPrint;
+    int ret;
+    int readCharCount = 0, offset = 0;
+    char c;
     for (j=0; j<8; j++) {
 		countArray[j] = 0;
     }
@@ -39,10 +44,10 @@ int main(int argc, char *argv[])
 	    return -1;
     }
 
-	bzero(&hints, sizeof(hints)); //limpa a variável
+	bzero(&hints, sizeof(hints)); //limpa a variï¿½vel
 
 
-	hints.ai_family = PF_UNSPEC; //tipo do endereço não especificado
+	hints.ai_family = PF_UNSPEC; //tipo do endereï¿½o nï¿½o especificado
 	hints.ai_flags = AI_NUMERICHOST;
 
 	ret = getaddrinfo(argv[1], argv[2], &hints, &res);
@@ -64,6 +69,7 @@ int main(int argc, char *argv[])
     while(1) {
         
         printf ("SELECIONE A OPERACAO DESEJADA:\n Soma: + \n Subtracao: - \n Multiplicacao: * \n Divisao: : \n Resto: r \n Exponencial: e \n Raiz Quadrada: s \n Fatorial: ! \n Area do Circulo: c \n Area da esfera: a \n Raizes da formula de Bhaskara: b \n Relatorio de operacoes efetuadas pelo servidor: h \n Sair: ctrl+c\n\n");
+        fflush(stdin);
         scanf ("%c", &op);
 
         switch (op) {
@@ -71,70 +77,150 @@ int main(int argc, char *argv[])
                 printf("Digite os dois numeros desejados para a operacao selecionada:");
                 scanf ("%lf", array);
                 scanf ("%lf", array + 1);
-
+                numPrint = sprintf(message,"%c|%lf|%lf",op,array[0],array[1]);
+                message[numPrint] = '\0';
+                if (send(s,message,numPrint,0) == -1) {
+                    imprimeErro("send");
+                }
+                if ((recv_len = recv(s,buf, sizeof(buf),0)) == -1) {
+                    imprimeErro("recv");
+                }
+                sscanf(buf,"%lf",&r1);
                 printf ("\n%.2lf + %.2lf = %.2lf\n", array[0], array[1], r1);
                 break;
             case '-':
                 printf("Digite os dois numeros desejados para a operacao selecionada:");
                 scanf ("%lf", array);
                 scanf ("%lf", array + 1);
-
+                                numPrint = sprintf(message,"%c|%lf|%lf",op,array[0],array[1]);
+                message[numPrint] = '\0';
+                if (send(s,message,numPrint,0) == -1) {
+                    imprimeErro("send");
+                }
+                if ((recv_len = recv(s,buf, sizeof(buf),0)) == -1) {
+                    imprimeErro("recv");
+                }
+                sscanf(buf,"%lf",&r1);
                 printf ("\n%.2lf - %.2lf = %.2lf\n", array[0], array[1], r1);
             break;
             case '*':
                 printf("Digite os dois numeros desejados para a operacao selecionada:");
                 scanf ("%lf", array);
                 scanf ("%lf", array + 1);
-
+                numPrint = sprintf(message,"%c|%lf|%lf",op,array[0],array[1]);
+                message[numPrint] = '\0';
+                if (send(s,message,numPrint,0) == -1) {
+                    imprimeErro("send");
+                }
+                if ((recv_len = recv(s,buf, sizeof(buf),0)) == -1) {
+                    imprimeErro("recv");
+                }
+                sscanf(buf,"%lf",&r1);
                 printf ("\n%.2lf * %.2lf = %.2lf\n", array[0], array[1], r1);
             break;
             case ':':
                 printf("Digite os dois numeros desejados para a operacao selecionada:");
                 scanf ("%lf", array);
                 scanf ("%lf", array + 1);
-
+                numPrint = sprintf(message,"%c|%lf|%lf",op,array[0],array[1]);
+                message[numPrint] = '\0';
+                if (send(s,message,numPrint,0) == -1) {
+                    imprimeErro("send");
+                }
+                if ((recv_len = recv(s,buf, sizeof(buf),0)) == -1) {
+                    imprimeErro("recv");
+                }
+                sscanf(buf,"%lf",&r1);
                 printf ("\n%.2lf / %.2lf = %.2lf\n", array[0], array[1], r1);
             break;
             case 'r':
                 printf("Digite dois numeros inteiros para se obter o resto da divisao: ");
                 scanf ("%d", intArray);
                 scanf ("%d", intArray + 1);
-
+                numPrint = sprintf(message,"%c|%d|%d",op,intArray[0],intArray[1]);
+                message[numPrint] = '\0';
+                if (send(s,message,numPrint,0) == -1) {
+                    imprimeErro("send");
+                }
+                if ((recv_len = recv(s,buf, sizeof(buf),0)) == -1) {
+                    imprimeErro("recv");
+                }
+                sscanf(buf,"%d",&r12);
                 printf ("\nResto de %d/%d = %d\n", intArray[0], intArray[1], r12);
             break;
             case 'e':
                 printf("Digite os dois numeros desejados para a operacao selecionada:");
                 scanf ("%lf", array);
                 scanf ("%lf", array + 1);
-
+                numPrint = sprintf(message,"%c|%lf|%lf",op,array[0],array[1]);
+                message[numPrint] = '\0';
+                if (send(s,message,numPrint,0) == -1) {
+                    imprimeErro("send");
+                }
+                if ((recv_len = recv(s,buf, sizeof(buf),0)) == -1) {
+                    imprimeErro("recv");
+                }
+                sscanf(buf,"%lf",&r1);
                 printf ("\n%.2lf ^ %.2lf = %.2lf\n", array[0], array[1], r1);
             break;
             case 's':
                 printf("Digite um numero para se obter sua raiz quadrada: ");
                 scanf ("%lf",&num1);
-
+                numPrint = sprintf(message,"%c|%lf",op,num1);
+                message[numPrint] = '\0';
+                if (send(s,message,numPrint,0) == -1) {
+                    imprimeErro("send");
+                }
+                if ((recv_len = recv(s,buf, sizeof(buf),0)) == -1) {
+                    imprimeErro("recv");
+                }
+                sscanf(buf,"%lf",&r1);
                 printf("\nraiz quadrada de %.2lf = %.2lf\n", num1, r1);
             break;
 
             case '!':
                 printf("Digite um numero inteiro para se obter o fatorial do mesmo:");
                 scanf ("%d", &n1);
-
+                numPrint = sprintf(message,"%c|%d",op,n1);
+                message[numPrint] = '\0';
+                if (send(s,message,numPrint,0) == -1) {
+                    imprimeErro("send");
+                }
+                if ((recv_len = recv(s,buf, sizeof(buf),0)) == -1) {
+                    imprimeErro("recv");
+                }
+                sscanf(buf,"%d",&r12);
                 printf("\n%d! = %d\n", n1, r12);
             break;
             
 			case 'c':
 				printf("Digite o raio do circulo: ");
-				scanf("%lf", array);
-
-				printf("\n 2*pi*%lf ^2 = %lf\n", array[0], r1);
+				scanf("%lf", &num1);
+                numPrint = sprintf(message,"%c|%lf",op,num1);
+                message[numPrint] = '\0';
+                if (send(s,message,numPrint,0) == -1) {
+                    imprimeErro("send");
+                }
+                if ((recv_len = recv(s,buf, sizeof(buf),0)) == -1) {
+                    imprimeErro("recv");
+                }
+                sscanf(buf,"%lf",&r1);
+				printf("\n 2*pi*%lf ^2 = %lf\n", num1, r1);
 			break;
 
 			case 'a':
-				printf("Digite o raio do circulo: ");
-				scanf("%lf", array);
-
-				printf("\n 2*pi*%lf ^2 = %lf\n", array[0], r1);
+                printf("Digite o raio do circulo: ");
+				scanf("%lf", &num1);
+                numPrint = sprintf(message,"%c|%lf",op,num1);
+                message[numPrint] = '\0';
+                if (send(s,message,numPrint,0) == -1) {
+                    imprimeErro("send");
+                }
+                if ((recv_len = recv(s,buf, sizeof(buf),0)) == -1) {
+                    imprimeErro("recv");
+                }
+                sscanf(buf,"%lf",&r1);
+				printf("\n 2*pi*%lf ^2 = %lf\n", num1, r1);
 			break;
 
 			case 'b':
@@ -142,7 +228,15 @@ int main(int argc, char *argv[])
 				scanf("%lf", array);
 				scanf("%lf", array+1);
 				scanf("%lf", array+2);
-
+                numPrint = sprintf(message,"%c|%lf|%lf|%lf",op,array[0],array[1],array[2]);
+                message[numPrint] = '\0';
+                if (send(s,message,numPrint,0) == -1) {
+                    imprimeErro("send");
+                }
+                if ((recv_len = recv(s,buf, sizeof(buf),0)) == -1) {
+                    imprimeErro("recv");
+                }
+                sscanf(buf,"%lf%c%lf",&r1, &c, &r2);
 
 				printf("\n %lf*x^2 + %lf*x + %lf = 0, x1 = %lf, x2 = %lf \n", array[0], array[1], array[2], r1, r2);
 			break;
