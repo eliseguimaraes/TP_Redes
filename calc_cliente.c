@@ -30,7 +30,7 @@ int main(int argc, char *argv[])
     int recv_len;
     double array[3];
     int intArray[2], x;
-    int countArray[8];
+    int countArray[10];
     int numPrint;
     int ret;
     int readCharCount = 0, offset = 0;
@@ -245,12 +245,12 @@ int main(int argc, char *argv[])
 			if ((recv_len = recv(s, buf, sizeof(buf), 0)) == -1) {
 				imprimeErro("recv()");
             }
-
-			//while (sscanf(str + offset, "%c%d%*c%n", &col, &line, &readCharCount) == 2) {
-			//	printf("%c, %d\n", col, line);
-			//	offset += readCharCount;
-			//}
-	    	printf ("\nsoma: %d \nsubtracao: %d \nmultiplicacao: %d\ndivisao: %d \nresto: %d \nexponencial: %d\nraiz: %d\nfatorial: %d\n\n", countArray[0], countArray[1], countArray[2], countArray[3], countArray[4], countArray[5], countArray[6], countArray[7]);
+            i = 0;
+			while (sscanf(buf + offset, "%d%c%*c%n", countArray+i, &c, &readCharCount) == 2) {
+                i++;
+				offset += readCharCount;
+			}
+	    	printf ("\nsoma: %d \nsubtracao: %d \nmultiplicacao: %d\ndivisao: %d \nresto: %d \nexponencial: %d\nraiz: %d\nfatorial: %d\n area do circulo: %d\n area da esfera: %d\n bhaskara: %d\n\n", countArray[0], countArray[1], countArray[2], countArray[3], countArray[4], countArray[5], countArray[6], countArray[7], countArray[8], countArray[9]);
 	    break;
            
             default:
