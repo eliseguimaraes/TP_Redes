@@ -19,6 +19,7 @@
 #define BUFLEN 512  //tamanho maximo do buffer
 #define PORT 8888
 #define MAXCLIENTS 50
+#define OPERANDOS 11
  
 void imprimeErro(char *s)
 {
@@ -36,20 +37,45 @@ int fatorial (int n)
     y = n;
     return y;
 }
+
+double areaCirculo(double raio) {
+	return PI*raio ^ 2;
+}
+
+double areaEsfera(double raio) {
+	return 4 * PI*raio ^ 2;
+}
+// Calcula as duas raizes de uma equação quadrática
+void bhaskara(double a, double b, double c, double *r1Real, double *r1Imag, double *r2Real, double *r2Imag) {
+	double delta;
+	delta = pow(b, 2) - 4 * a*c;
+	if (delta >= 0) {
+		*r1Real = (-b + sqrt(delta)) / (2 * a);
+		*r2Real = (-b - sqrt(delta)) / (2 * a);
+		*r1Imag = 0;
+		*r2Imag = 0;
+	}
+	else {
+		*r1Real = -b / (2 * a);
+		*r1Imag = sqrt(-1 * delta) / (2 * a);
+		*r2Real = -b / (2 * a);
+		*r2Imag = -sqrt(-1 * delta) / (2 * a);
+	}
+}
  
 int main(int argc, char *argv[])
 {
-    double array[2], result, number;
-    int intArray[2], res, x, connectionSockets[MAXCLIENTS], activity, newSocket, sock;
-    int s, i, j, recv_len, opt = 1;
+	double operando[3], result, number, r1Real, r1Imag, r2Real, r2Imag;
+	int connectionSockets[MAXCLIENTS], activity, newSocket, readCount, cSock;
+	int passiveSocket, i, j, recvLen, opt = 1, addrlen, charsImpressos = 0;
+	int operandoInt1, operandoInt2;
     char buf[BUFLEN], message[BUFLEN];
-    char op;
-    int pid;
-    int countArray[8];
+	char operador, barraDeSeparacao;
+    int countArray[OPERANDOS];
     struct sockaddr_in6 cliaddr, servaddr;
     fd_set readfds;
 
-    for (j=0; j<8; j++) {
+    for (j=0; j<OPERANDOS; j++) {
 	    countArray[j] = 0;
     }
 
@@ -66,12 +92,12 @@ int main(int argc, char *argv[])
     }
 
 
-    if ((s=socket(AF_INET6 ,SOCK_STREAM,0)) == 0) {
+    if ((passiveSocket=socket(AF_INET6 ,SOCK_STREAM,0)) == 0) {
         imprimeErro("socket");
     }
 
     //Configura o socket para receber múltiplas conexões
-    if( setsockopt(s, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt)) < 0 )
+    if( setsockopt(passiveSocket, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt)) < 0 )
     {
         perror("setsockopt");
         exit(EXIT_FAILURE);
@@ -82,173 +108,210 @@ int main(int argc, char *argv[])
     servaddr.sin_port = htons(argv[1]);
 
 
-     if (bind(s,(struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
+     if (bind(passiveSocket,(struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
          imprimeErro("bind");
      }
 
-    if (listen(s,10) < 0) {
+    if (listen(passiveSocket,10) < 0) {
         imprimeErro("listen");
     }
+
+	addrlen = sizeof(servaddr);
 
      
     //mantem a espera de dado
     while(1)
     {
 
-        //clear the socket set
+        //Limpa o conjunto de sockets
         FD_ZERO(&readfds);
  
-        //add master socket to set
-        FD_SET(sock, &readfds);
+        //Adiciona o socket passivo (principal) ao conjunto
+        FD_SET(passiveSocket, &readfds);
          
-        //add child sockets to set
+        //Adiciona os connectionSockets ao conjunto
         for ( i = 0 ; i < MAXCLIENTS ; i++)
         {
-            sock = connectionSockets[i];
-            if(sock > 0)
+            if(connectionSockets[i] > 0)
             {
-                FD_SET( sock , &readfds);
+                FD_SET(connectionSockets[i], &readfds);
             }
         }
  
-        //wait for an activity on one of the sockets , timeout is NULL , so wait indefinitely
-        activity = select( MAXCLIENTS + 3 , &readfds , NULL , NULL , NULL);
+        // Aguarda infinitamente até que haja atividade em algum dos sockets adicionados ao conjunto
+		// (Função bloqueante)
+        activity = select( MAXCLIENTS + 10 , &readfds , NULL , NULL , NULL);
    
         if ((activity < 0) && (errno!=EINTR))
         {
-            printf("select error");
+            printf("Erro: select");
         }
          
-        //If something happened on the master socket , then its an incoming connection
-        if (FD_ISSET(s, &readfds))
+		// Acontecimento no socket principal: nova conexão
+        if (FD_ISSET(passiveSocket, &readfds))
         {
             //Aceita nova conexão e salva o cliente
+			if ((newSocket = accept(master_socket, (struct sockaddr *)&servaddr, (socklen_t*)&addrlen))<0)
+			{
+				imprimeErro("accept");
+			}
+			//Adiciona o novo socket ao array de connectionSockets
+			for (i = 0; i < MAXCLIENTS; i++)
+			{
+				if (connectionSockets[i] == 0)
+				{
+					connectionSockets[i] = newSocket;
+					break;
+				}
+			}
         }
         // Verifica em qual cliente ocorreu a atividade e lida com a requisição
-        
+		for (i = 0; i < MAXCLIENTS; i++) {
+			cSock = connectionSockets[i];
+			if (FD_ISSET(cSock, &readfds)) {
+				if ((recvLen = recv(cSock, buf, BUFLEN, 0)) < 0) {
+					imprimeErro("recv");
+				}
+				else if (recvLen == 0) {
+					close(cSock);
+					connectionSockets[i] = 0;
+				}
+				else {
+					buf[recvLen] = '\0';
+					getpeername(cSock, (struct sockaddr*)&cliaddr, (socklen_t*)&addrlen);
+					printf("Pacote recebido de: %s:%d\n", inet_ntoa(cliaddr.sin_addr), ntohs(cliaddr.sin_port));
+					printf("Data: %s\n", buf);
+					sscanf(buf, "%c", &operador);
+
+					switch (operador) { //verifica a operação recebida, e lê os demais números
+
+						case '+':
+							sscanf(buf+2, "%lf%*c%lf", operando, operando + 1);
+							result = operando[0] + operando[1];
+							fprintf(message, "%lf", result);
+							if (send(cSock, message, strlen(message), 0) == -1) {
+								imprimeErro("send()");
+							}
+							countArray[0]++;
+							break;
+						case '-':
+							sscanf(buf + 2, "%lf%*c%lf", operando, operando + 1);
+							result = operando[0] - operando[1];
+							fprintf(message, "%lf", result);
+							if (send(cSock, message, strlen(message), 0) == -1) {
+								imprimeErro("send()");
+							}
+							countArray[1]++;
+							break;
+						case '*':
+							sscanf(buf + 2, "%lf%*c%lf", operando, operando + 1);
+							result = operando[0] * operando[1];
+							fprintf(message, "%lf", result);
+							if (send(cSock, message, strlen(message), 0) == -1) {
+								imprimeErro("send()");
+							}
+							countArray[2]++;
+							break;
+						case ':':
+							sscanf(buf + 2, "%lf%*c%lf", operando, operando + 1);
+							result = operando[0] / operando[1];
+							fprintf(message, "%lf", result);
+							if (send(cSock, message, strlen(message), 0) == -1) {
+								imprimeErro("send()");
+							}
+							countArray[3]++;
+							break;
+						case 'r':
+							sscanf(buf + 2, "%lf%*c%lf", operando, operando + 1);
+							operandoInt1 = (int)operando[0];
+							operandoInt2 = (int)operando[1];
+							result = operandoInt1 % operandoInt2;
+							fprintf(message, "%lf", result);
+							if (send(cSock, message, strlen(message), 0) == -1) {
+								imprimeErro("send()");
+							}
+							countArray[4]++;
+							break;
+						case 'e':
+							sscanf(buf + 2, "%lf%*c%lf", operando, operando + 1);
+							result = pow(operando[0], operando[1]);
+							fprintf(message, "%lf", result);
+							if (send(cSock, message, strlen(message), 0) == -1) {
+								imprimeErro("send()");
+							}
+							countArray[5]++;
+							break;
+						case 's':
+							sscanf(buf + 2, "%lf", operando);
+							result = sqrt(operando);
+							fprintf(message, "%lf", result);
+							if (send(cSock, message, strlen(message), 0) == -1) {
+								imprimeErro("send()");
+							}
+							countArray[6]++;
+							break;
+
+						case '!':
+							sscanf(buf + 2, "%lf", operando);
+							result = fatorial((int)operando[1]);
+							fprintf(message, "%lf", result);
+							if (send(cSock, message, strlen(message), 0) == -1) {
+								imprimeErro("send()");
+							}
+							countArray[7]++;
+							break;
+						case 'c':
+							sscanf(buf + 2, "%lf", operando);
+							result = areaCirculo(operando[1]);
+							fprintf(message, "%lf", result);
+							if (send(cSock, message, strlen(message), 0) == -1) {
+								imprimeErro("send()");
+							}
+							countArray[8]++;
+							break;
+						case 'a':
+							sscanf(buf + 2, "%lf", operando);
+							result = areaEsfera(operando[1]);
+							fprintf(message, "%lf", result);
+							if (send(cSock, message, strlen(message), 0) == -1) {
+								imprimeErro("send()");
+							}
+							countArray[9]++;
+							break;
+						case 'b':
+							sscanf(buf + 2, "%lf%*c%lf%*c%lf", operando, operando+1,operando+2);
+							bhaskara(operando[1], operando[2], operando[3], &r1Real, &r1Imag, &r2Real, &r2Imag);
+							fprintf(message, "%lf|%lf|%lf|%lf", r1Real, r1Imag, r2Real, r2Imag);
+							if (send(cSock, message, strlen(message), 0) == -1) {
+								imprimeErro("send()");
+							}
+							countArray[10]++;
+							break;
+
+						case 'h':
+							for (j = 0; j < OPERANDOS; j++) {
+								// Imprime soma de incidência das operações
+								charsImpressos += fprintf(message + charsImpressos, "%d|", countArray[j]);
+							}
+							if (send(passiveSocket, message, strlen(message), 0) == -1) {
+								imprimeErro("send()");
+							}
+							break;
 
 
 
-        printf("Aguardando dados...\n\n");
-        fflush(stdout);
-         
-        //tenta receber algum dado, chamada de bloqueio
-        if ((recv_len = recvfrom(s, buf, BUFLEN, 0, (struct sockaddr *) &si_other, &slen)) == -1) {
-            imprimeErro("recvfrom()");
-        }
-        
+						default:
+							printf("ERRO: operacao incorreta\n\n");
+							break;
+					}
+				}
+			}
+		}
 
-         
-                printf("Pacote recebido de: %s:%d\n", inet_ntoa(si_other.sin_addr), ntohs(si_other.sin_port));
-                buf[recv_len] = '\0';
-                printf("Data: %s\n" , buf);
-                sscanf(buf, "%c", &op);
-                
-                //envia ack para o cliente
-                if (sendto(s, "ack", 3, 0, (struct sockaddr*) &si_other, slen) == -1) {
-                    imprimeErro("sendto()");
-                }
-            
-                switch (op) {
-                    //verifica a operação recebida, e recebe os demais números
-                    case '+':
-                        if ((recv_len = recvfrom(s, array, sizeof(array), 0, (struct sockaddr *) &si_other, &slen)) == -1) {
-                                imprimeErro("recvfrom()");
-                        }
-                        result = array[0] + array[1];
-                        if (sendto(s, &result, sizeof(result), 0, (struct sockaddr*) &si_other, slen) == -1) {
-                            imprimeErro("sendto()");
-                        }
-			countArray[0]++;
-                        break;
-                    case '-':
 
-                        if ((recv_len = recvfrom(s, array, sizeof(array), 0, (struct sockaddr *) &si_other, &slen)) == -1) {
-                                imprimeErro("recvfrom()");
-                        }
-                        result = array[0] - array[1];
-                        if (sendto(s, &result, sizeof(result), 0, (struct sockaddr*) &si_other, slen) == -1) {
-                            imprimeErro("sendto()");
-                        }
-			countArray[1]++;
-                        break;
-                    case '*':
-                        if ((recv_len = recvfrom(s, array, sizeof(array), 0, (struct sockaddr *) &si_other, &slen)) == -1) {
-                            imprimeErro("recvfrom()");
-                        }
-                        result = array[0]*array[1];
-                        if (sendto(s, &result, sizeof(result), 0, (struct sockaddr*) &si_other, slen) == -1) {
-                            imprimeErro("sendto()");
-                        }
-			countArray[2]++;
-                        break;
-                    case ':':
-                        if ((recv_len = recvfrom(s, array, sizeof(array), 0, (struct sockaddr *) &si_other, &slen)) == -1) {
-                            imprimeErro("recvfrom()");
-                        }
-                        result = array[0]/array[1];
-                        if (sendto(s, &result, sizeof(result), 0, (struct sockaddr*) &si_other, slen) == -1) {
-                            imprimeErro("sendto()");
-                        }
-			countArray[3]++;
-                    break;
-                    case 'r':
-                        if ((recv_len = recvfrom(s, intArray, sizeof(intArray), 0, (struct sockaddr *) &si_other, &slen)) == -1) {
-                                imprimeErro("recvfrom()");
-                        }
-                        res = intArray[0]%intArray[1];
-                        if (sendto(s, &res, sizeof(res), 0, (struct sockaddr*) &si_other, slen) == -1) {
-                            imprimeErro("sendto()");
-                        }
-			countArray[4]++;
-                    break;
-                    case 'e':
-                        if ((recv_len = recvfrom(s, array, sizeof(array), 0, (struct sockaddr *) &si_other, &slen)) == -1) {
-                            imprimeErro("recvfrom()");
-                        }
-                        result = pow(array[0],array[1]);
-                        if (sendto(s, &result, sizeof(result), 0, (struct sockaddr*) &si_other, slen) == -1) {
-                            imprimeErro("sendto()");
-                        }
-			countArray[5]++;
-                    break;
-                    case 's':
-                        if ((recv_len = recvfrom(s, &number, sizeof(number), 0, (struct sockaddr *) &si_other, &slen)) == -1) {
-                            imprimeErro("recvfrom()");
-                        }
-                        result = sqrt(number);
-                        if (sendto(s, &result, sizeof(result), 0, (struct sockaddr*) &si_other, slen) == -1) {
-                            imprimeErro("sendto()");
-                        }
-			countArray[6]++;
-                    break;
-
-                    case '!':
-                        if ((recv_len = recvfrom(s, &x, sizeof(x), 0, (struct sockaddr *) &si_other, &slen)) == -1) {
-                                imprimeErro("recvfrom()");
-                        }
-                        res = fatorial(x);
-                        if (sendto(s, &res, sizeof(res), 0, (struct sockaddr*) &si_other, slen) == -1) {
-                            imprimeErro("sendto()");
-                        }
-			countArray[7]++;
-                    break;
-		    
-  		    case 'h':
-                        if (sendto(s, &countArray, sizeof(countArray), 0, (struct sockaddr*) &si_other, slen) == -1) {
-                            imprimeErro("sendto()");
-                        }
-			break;
-
-		 
-
-                    default:
-                        printf("ERRO: operacao incorreta\n\n");
-                        break;
-                }
-            }
+    }
 
  
-    close(s);
+    close(passiveSocket);
     return 0;
 }
