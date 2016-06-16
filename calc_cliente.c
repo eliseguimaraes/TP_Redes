@@ -10,6 +10,7 @@
 #define BUFLEN 512  //tamanho maximo do buffer
 #define PORT 8888
 #define SERVER "127.0.0.1"
+#define OPERANDOS 11
  
 void imprimeErro(char *s)
 {
@@ -23,19 +24,19 @@ int main(int argc, char *argv[])
     int s, i, slen=sizeof(si_other);
     char buf[BUFLEN];
     char message[BUFLEN];
-	double num1, num2, r1 = 0, r2 = 0;
-    int r12, n1, n2, j;
+	double num1, r1 = 0, r1Real = 0, r2Real = 0, r1Imag = 0, r2Imag = 0;
+    int n2, j;
 	struct addrinfo hints, *res;
     char op;
     int recv_len;
     double array[3];
     int intArray[2], x;
-    int countArray[10];
+    int countArray[OPERANDOS];
     int numPrint;
     int ret;
     int readCharCount = 0, offset = 0;
     char c;
-    for (j=0; j<8; j++) {
+    for (j=0; j<OPERANDOS; j++) {
 		countArray[j] = 0;
     }
 
@@ -134,10 +135,10 @@ int main(int argc, char *argv[])
                 printf ("\n%.2lf / %.2lf = %.2lf\n", array[0], array[1], r1);
             break;
             case 'r':
-                printf("Digite dois numeros inteiros para se obter o resto da divisao: ");
-                scanf ("%d", intArray);
-                scanf ("%d", intArray + 1);
-                numPrint = sprintf(message,"%c|%d|%d",op,intArray[0],intArray[1]);
+                printf("Digite os dois numeros desejados para a operacao selecionada:");
+                scanf ("%lf", array);
+                scanf ("%lf", array + 1);
+                numPrint = sprintf(message,"%c|%lf|%lf",op,array[0],array[1]);
                 message[numPrint] = '\0';
                 if (send(s,message,numPrint,0) == -1) {
                     imprimeErro("send");
@@ -145,8 +146,8 @@ int main(int argc, char *argv[])
                 if ((recv_len = recv(s,buf, sizeof(buf),0)) == -1) {
                     imprimeErro("recv");
                 }
-                sscanf(buf,"%d",&r12);
-                printf ("\nResto de %d/%d = %d\n", intArray[0], intArray[1], r12);
+                sscanf(buf,"%lf",&r1);
+                printf ("\nResto de %lf/%lf = %lf\n", array[0], array[1], r1);
             break;
             case 'e':
                 printf("Digite os dois numeros desejados para a operacao selecionada:");
@@ -179,9 +180,9 @@ int main(int argc, char *argv[])
             break;
 
             case '!':
-                printf("Digite um numero inteiro para se obter o fatorial do mesmo:");
-                scanf ("%d", &n1);
-                numPrint = sprintf(message,"%c|%d",op,n1);
+                printf("Digite um numero para se obter o fatorial do mesmo:");
+                scanf ("%lf", &num1);
+                numPrint = sprintf(message,"%c|%lf",op,num1);
                 message[numPrint] = '\0';
                 if (send(s,message,numPrint,0) == -1) {
                     imprimeErro("send");
@@ -189,8 +190,8 @@ int main(int argc, char *argv[])
                 if ((recv_len = recv(s,buf, sizeof(buf),0)) == -1) {
                     imprimeErro("recv");
                 }
-                sscanf(buf,"%d",&r12);
-                printf("\n%d! = %d\n", n1, r12);
+                sscanf(buf,"%lf",&r1);
+                printf("\n%lf! = %lf\n", num1, r1);
             break;
             
 			case 'c':
@@ -205,7 +206,7 @@ int main(int argc, char *argv[])
                     imprimeErro("recv");
                 }
                 sscanf(buf,"%lf",&r1);
-				printf("\n 2*pi*%lf ^2 = %lf\n", num1, r1);
+				printf("\n pi*%lf ^2 = %lf\n", num1, r1);
 			break;
 
 			case 'a':
@@ -220,7 +221,7 @@ int main(int argc, char *argv[])
                     imprimeErro("recv");
                 }
                 sscanf(buf,"%lf",&r1);
-				printf("\n 2*pi*%lf ^2 = %lf\n", num1, r1);
+				printf("\n 4*pi*%lf ^2 = %lf\n", num1, r1);
 			break;
 
 			case 'b':
@@ -236,9 +237,9 @@ int main(int argc, char *argv[])
                 if ((recv_len = recv(s,buf, sizeof(buf),0)) == -1) {
                     imprimeErro("recv");
                 }
-                sscanf(buf,"%lf%c%lf",&r1, &c, &r2);
+                sscanf(buf,"%lf%*c%lf%*c%lf%*c%lf",&r1Real, &r1Imag, &r2Real, &r2Imag);
 
-				printf("\n %lf*x^2 + %lf*x + %lf = 0, x1 = %lf, x2 = %lf \n", array[0], array[1], array[2], r1, r2);
+				printf("\n %lf*x^2 + %lf*x + %lf = 0, x1 = %lf + i%lf, x2 = %lf + i%lf \n", array[0], array[1], array[2], r1Real, r1Imag, r2Real, r2Imag);
 			break;
 
 	    case 'h':
@@ -246,11 +247,11 @@ int main(int argc, char *argv[])
 				imprimeErro("recv()");
             }
             i = 0;
-			while (sscanf(buf + offset, "%d%c%*c%n", countArray+i, &c, &readCharCount) == 2) {
+			while (sscanf(buf + offset, "%d%*c%n", countArray+i, &readCharCount) == 1) {
                 i++;
 				offset += readCharCount;
 			}
-	    	printf ("\nsoma: %d \nsubtracao: %d \nmultiplicacao: %d\ndivisao: %d \nresto: %d \nexponencial: %d\nraiz: %d\nfatorial: %d\n area do circulo: %d\n area da esfera: %d\n bhaskara: %d\n\n", countArray[0], countArray[1], countArray[2], countArray[3], countArray[4], countArray[5], countArray[6], countArray[7], countArray[8], countArray[9]);
+	    	printf ("\nsoma: %d \nsubtracao: %d \nmultiplicacao: %d\ndivisao: %d \nresto: %d \nexponencial: %d\nraiz: %d\nfatorial: %d\n area do circulo: %d\n area da esfera: %d\n bhaskara: %d\n\n", countArray[0], countArray[1], countArray[2], countArray[3], countArray[4], countArray[5], countArray[6], countArray[7], countArray[8], countArray[9], countArray[10]);
 	    break;
            
             default:
