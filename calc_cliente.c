@@ -93,7 +93,7 @@ int main(int argc, char *argv[])
                 printf("Digite os dois numeros desejados para a operacao selecionada:");
                 scanf ("%lf", array);
                 scanf ("%lf", array + 1);
-                                numPrint = sprintf(message,"%c|%lf|%lf",op,array[0],array[1]);
+                numPrint = sprintf(message,"%c|%lf|%lf",op,array[0],array[1]);
                 message[numPrint] = '\0';
                 if (send(s,message,numPrint,0) == -1) {
                     imprimeErro("send");
@@ -210,7 +210,7 @@ int main(int argc, char *argv[])
 			break;
 
 			case 'a':
-                printf("Digite o raio do circulo: ");
+                printf("Digite o raio da esfera: ");
 				scanf("%lf", &num1);
                 numPrint = sprintf(message,"%c|%lf",op,num1);
                 message[numPrint] = '\0';
@@ -239,10 +239,15 @@ int main(int argc, char *argv[])
                 }
                 sscanf(buf,"%lf%*c%lf%*c%lf%*c%lf",&r1Real, &r1Imag, &r2Real, &r2Imag);
 
-				printf("\n %lf*x^2 + %lf*x + %lf = 0, x1 = %lf + i%lf, x2 = %lf + i%lf \n", array[0], array[1], array[2], r1Real, r1Imag, r2Real, r2Imag);
+				printf("\n %lf*x^2 + %lf*x + %lf = 0, x1 = %lf + %lfi, x2 = %lf + %lfi \n", array[0], array[1], array[2], r1Real, r1Imag, r2Real, r2Imag);
 			break;
 
 	    case 'h':
+            numPrint = sprintf(message,"%c",op);
+            message[numPrint] = '\0';
+            if (send(s,message,numPrint,0) == -1) {
+                imprimeErro("send");
+            }
 			if ((recv_len = recv(s, buf, sizeof(buf), 0)) == -1) {
 				imprimeErro("recv()");
             }
@@ -251,6 +256,7 @@ int main(int argc, char *argv[])
                 i++;
 				offset += readCharCount;
 			}
+            sscanf(buf, "%d%*c%d%*c%d%*c%d%*c%d%*c%d%*c%d%*c%d%*c%d%*c%d%*c%d%*c%d%", countArray, countArray + 1, countArray+ 2, countArray+ 3, countArray + 4, countArray + 5, countArray + 6, countArray + 7, countArray + 8, countArray + 9, countArray + 10);
 	    	printf ("\nsoma: %d \nsubtracao: %d \nmultiplicacao: %d\ndivisao: %d \nresto: %d \nexponencial: %d\nraiz: %d\nfatorial: %d\n area do circulo: %d\n area da esfera: %d\n bhaskara: %d\n\n", countArray[0], countArray[1], countArray[2], countArray[3], countArray[4], countArray[5], countArray[6], countArray[7], countArray[8], countArray[9], countArray[10]);
 	    break;
            

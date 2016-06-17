@@ -13,6 +13,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <sys/time.h> //FD_SET, FD_ISSET, FD_ZERO macros
+#include <netdb.h>
  
 
  
@@ -39,11 +40,11 @@ int fatorial (int n)
 }
 
 double areaCirculo(double raio) {
-	return PI*raio ^ 2;
+	return M_PI*pow(raio,2);
 }
 
 double areaEsfera(double raio) {
-	return 4 * PI*raio ^ 2;
+	return 4 * M_PI*pow(raio,2);
 }
 // Calcula as duas raizes de uma equação quadrática
 void bhaskara(double a, double b, double c, double *r1Real, double *r1Imag, double *r2Real, double *r2Imag) {
@@ -73,6 +74,9 @@ int main(int argc, char *argv[])
 	char operador, barraDeSeparacao;
     int countArray[OPERANDOS];
     struct sockaddr_in6 cliaddr, servaddr;
+	struct addrinfo hints, *res;
+	int ret;
+	char straddr[INET6_ADDRSTRLEN];
     fd_set readfds;
 
     for (j=0; j<OPERANDOS; j++) {
@@ -91,24 +95,29 @@ int main(int argc, char *argv[])
 	    return -1;
     }
 
+	hints.ai_flags = AI_PASSIVE;
+	hints.ai_family = AF_INET6;
+	hints.ai_socktype = SOCK_STREAM;
+	hints.ai_protocol = 0;
 
-    if ((passiveSocket=socket(AF_INET6 ,SOCK_STREAM,0)) == 0) {
+	ret = getaddrinfo(NULL, argv[1], &hints, &res);
+	if (ret) {
+		imprimeErro("getaddrinfo");
+	}
+
+
+    if ((passiveSocket=socket(res->ai_family ,SOCK_STREAM,0)) == 0) {
         imprimeErro("socket");
     }
 
     //Configura o socket para receber múltiplas conexões
     if( setsockopt(passiveSocket, SOL_SOCKET, SO_REUSEADDR, (char *)&opt, sizeof(opt)) < 0 )
     {
-        perror("setsockopt");
-        exit(EXIT_FAILURE);
+        imprimeErro("setsockopt");
     }
 
-    servaddr.sin_family = AF_INET6;
-    servaddr.sin_addr.s_addr = INADDR_ANY;
-    servaddr.sin_port = htons(argv[1]);
 
-
-     if (bind(passiveSocket,(struct sockaddr *)&servaddr, sizeof(servaddr)) < 0) {
+     if (bind(passiveSocket, res->ai_addr, res->ai_addrlen) < 0) {
          imprimeErro("bind");
      }
 
@@ -116,7 +125,7 @@ int main(int argc, char *argv[])
         imprimeErro("listen");
     }
 
-	addrlen = sizeof(servaddr);
+	addrlen = sizeof(cliaddr);
 
      
     //mantem a espera de dado
@@ -151,7 +160,7 @@ int main(int argc, char *argv[])
         if (FD_ISSET(passiveSocket, &readfds))
         {
             //Aceita nova conexão e salva o cliente
-			if ((newSocket = accept(master_socket, (struct sockaddr *)&servaddr, (socklen_t*)&addrlen))<0)
+			if ((newSocket = accept(passiveSocket, (struct sockaddr *)&cliaddr, (socklen_t*)&addrlen))<0)
 			{
 				imprimeErro("accept");
 			}
@@ -179,7 +188,8 @@ int main(int argc, char *argv[])
 				else {
 					buf[recvLen] = '\0';
 					getpeername(cSock, (struct sockaddr*)&cliaddr, (socklen_t*)&addrlen);
-					printf("Pacote recebido de: %s:%d\n", inet_ntoa(cliaddr.sin_addr), ntohs(cliaddr.sin_port));
+					inet_ntop(AF_INET6, &cliaddr.sin6_addr, straddr, sizeof(straddr));
+					printf("Pacote recebido de: %s:%d\n", straddr, ntohs(cliaddr.sin6_port));
 					printf("Data: %s\n", buf);
 					sscanf(buf, "%c", &operador);
 
@@ -188,7 +198,7 @@ int main(int argc, char *argv[])
 						case '+':
 							sscanf(buf+2, "%lf%*c%lf", operando, operando + 1);
 							result = operando[0] + operando[1];
-							fprintf(message, "%lf", result);
+							sprintf(message, "%lf", result);
 							if (send(cSock, message, strlen(message), 0) == -1) {
 								imprimeErro("send()");
 							}
@@ -197,7 +207,7 @@ int main(int argc, char *argv[])
 						case '-':
 							sscanf(buf + 2, "%lf%*c%lf", operando, operando + 1);
 							result = operando[0] - operando[1];
-							fprintf(message, "%lf", result);
+							sprintf(message, "%lf", result);
 							if (send(cSock, message, strlen(message), 0) == -1) {
 								imprimeErro("send()");
 							}
@@ -206,7 +216,7 @@ int main(int argc, char *argv[])
 						case '*':
 							sscanf(buf + 2, "%lf%*c%lf", operando, operando + 1);
 							result = operando[0] * operando[1];
-							fprintf(message, "%lf", result);
+							sprintf(message, "%lf", result);
 							if (send(cSock, message, strlen(message), 0) == -1) {
 								imprimeErro("send()");
 							}
@@ -215,7 +225,7 @@ int main(int argc, char *argv[])
 						case ':':
 							sscanf(buf + 2, "%lf%*c%lf", operando, operando + 1);
 							result = operando[0] / operando[1];
-							fprintf(message, "%lf", result);
+							sprintf(message, "%lf", result);
 							if (send(cSock, message, strlen(message), 0) == -1) {
 								imprimeErro("send()");
 							}
@@ -226,7 +236,7 @@ int main(int argc, char *argv[])
 							operandoInt1 = (int)operando[0];
 							operandoInt2 = (int)operando[1];
 							result = operandoInt1 % operandoInt2;
-							fprintf(message, "%lf", result);
+							sprintf(message, "%lf", result);
 							if (send(cSock, message, strlen(message), 0) == -1) {
 								imprimeErro("send()");
 							}
@@ -235,7 +245,7 @@ int main(int argc, char *argv[])
 						case 'e':
 							sscanf(buf + 2, "%lf%*c%lf", operando, operando + 1);
 							result = pow(operando[0], operando[1]);
-							fprintf(message, "%lf", result);
+							sprintf(message, "%lf", result);
 							if (send(cSock, message, strlen(message), 0) == -1) {
 								imprimeErro("send()");
 							}
@@ -243,8 +253,8 @@ int main(int argc, char *argv[])
 							break;
 						case 's':
 							sscanf(buf + 2, "%lf", operando);
-							result = sqrt(operando);
-							fprintf(message, "%lf", result);
+							result = sqrt(operando[0]);
+							sprintf(message, "%lf", result);
 							if (send(cSock, message, strlen(message), 0) == -1) {
 								imprimeErro("send()");
 							}
@@ -253,8 +263,8 @@ int main(int argc, char *argv[])
 
 						case '!':
 							sscanf(buf + 2, "%lf", operando);
-							result = fatorial((int)operando[1]);
-							fprintf(message, "%lf", result);
+							result = fatorial((int)operando[0]);
+							sprintf(message, "%lf", result);
 							if (send(cSock, message, strlen(message), 0) == -1) {
 								imprimeErro("send()");
 							}
@@ -262,8 +272,8 @@ int main(int argc, char *argv[])
 							break;
 						case 'c':
 							sscanf(buf + 2, "%lf", operando);
-							result = areaCirculo(operando[1]);
-							fprintf(message, "%lf", result);
+							result = areaCirculo(operando[0]);
+							sprintf(message, "%lf", result);
 							if (send(cSock, message, strlen(message), 0) == -1) {
 								imprimeErro("send()");
 							}
@@ -271,8 +281,8 @@ int main(int argc, char *argv[])
 							break;
 						case 'a':
 							sscanf(buf + 2, "%lf", operando);
-							result = areaEsfera(operando[1]);
-							fprintf(message, "%lf", result);
+							result = areaEsfera(operando[0]);
+							sprintf(message, "%lf", result);
 							if (send(cSock, message, strlen(message), 0) == -1) {
 								imprimeErro("send()");
 							}
@@ -280,8 +290,8 @@ int main(int argc, char *argv[])
 							break;
 						case 'b':
 							sscanf(buf + 2, "%lf%*c%lf%*c%lf", operando, operando+1,operando+2);
-							bhaskara(operando[1], operando[2], operando[3], &r1Real, &r1Imag, &r2Real, &r2Imag);
-							fprintf(message, "%lf|%lf|%lf|%lf", r1Real, r1Imag, r2Real, r2Imag);
+							bhaskara(operando[0], operando[1], operando[2], &r1Real, &r1Imag, &r2Real, &r2Imag);
+							sprintf(message, "%lf|%lf|%lf|%lf", r1Real, r1Imag, r2Real, r2Imag);
 							if (send(cSock, message, strlen(message), 0) == -1) {
 								imprimeErro("send()");
 							}
@@ -289,10 +299,7 @@ int main(int argc, char *argv[])
 							break;
 
 						case 'h':
-							for (j = 0; j < OPERANDOS; j++) {
-								// Imprime soma de incidência das operações
-								charsImpressos += fprintf(message + charsImpressos, "%d|", countArray[j]);
-							}
+							sprintf(message, "%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d", countArray[0], countArray[1], countArray[2], countArray[3], countArray[4], countArray[5], countArray[6], countArray[7], countArray[8], countArray[9], countArray[10]);
 							if (send(passiveSocket, message, strlen(message), 0) == -1) {
 								imprimeErro("send()");
 							}
