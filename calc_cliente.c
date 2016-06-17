@@ -71,7 +71,7 @@ int main(int argc, char *argv[])
         
         printf ("SELECIONE A OPERACAO DESEJADA:\n Soma: + \n Subtracao: - \n Multiplicacao: * \n Divisao: : \n Resto: r \n Exponencial: e \n Raiz Quadrada: s \n Fatorial: ! \n Area do Circulo: c \n Area da esfera: a \n Raizes da formula de Bhaskara: b \n Relatorio de operacoes efetuadas pelo servidor: h \n Sair: ctrl+c\n\n");
         fflush(stdin);
-        scanf ("%c", &op);
+        scanf (" %c", &op);
 
         switch (op) {
             case '+':
@@ -251,12 +251,8 @@ int main(int argc, char *argv[])
 			if ((recv_len = recv(s, buf, sizeof(buf), 0)) == -1) {
 				imprimeErro("recv()");
             }
-            i = 0;
-			while (sscanf(buf + offset, "%d%*c%n", countArray+i, &readCharCount) == 1) {
-                i++;
-				offset += readCharCount;
-			}
-            sscanf(buf, "%d%*c%d%*c%d%*c%d%*c%d%*c%d%*c%d%*c%d%*c%d%*c%d%*c%d%*c%d%", countArray, countArray + 1, countArray+ 2, countArray+ 3, countArray + 4, countArray + 5, countArray + 6, countArray + 7, countArray + 8, countArray + 9, countArray + 10);
+            buf[recv_len] = '\0';
+            sscanf(buf, "%d%*c%d%*c%d%*c%d%*c%d%*c%d%*c%d%*c%d%*c%d%*c%d%*c%d", countArray, countArray + 1, countArray+ 2, countArray+ 3, countArray + 4, countArray + 5, countArray + 6, countArray + 7, countArray + 8, countArray + 9, countArray + 10);
 	    	printf ("\nsoma: %d \nsubtracao: %d \nmultiplicacao: %d\ndivisao: %d \nresto: %d \nexponencial: %d\nraiz: %d\nfatorial: %d\n area do circulo: %d\n area da esfera: %d\n bhaskara: %d\n\n", countArray[0], countArray[1], countArray[2], countArray[3], countArray[4], countArray[5], countArray[6], countArray[7], countArray[8], countArray[9], countArray[10]);
 	    break;
            

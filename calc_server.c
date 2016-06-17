@@ -300,7 +300,7 @@ int main(int argc, char *argv[])
 
 						case 'h':
 							sprintf(message, "%d|%d|%d|%d|%d|%d|%d|%d|%d|%d|%d", countArray[0], countArray[1], countArray[2], countArray[3], countArray[4], countArray[5], countArray[6], countArray[7], countArray[8], countArray[9], countArray[10]);
-							if (send(passiveSocket, message, strlen(message), 0) == -1) {
+							if (send(cSock, message, strlen(message), 0) == -1) {
 								imprimeErro("send()");
 							}
 							break;
