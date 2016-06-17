@@ -31,6 +31,8 @@ void imprimeErro(char *s)
 int fatorial (int n)
 {
     int i,y;
+	if (n == 0) return 1;
+	if (n < 0) return 0; //decisão de implementação: não existe fatorial de números negativos, logo retorna-se 0
     for (i = n-1; i!=1; i--)
     {
         n = n*i;
@@ -45,6 +47,17 @@ double areaCirculo(double raio) {
 
 double areaEsfera(double raio) {
 	return 4 * M_PI*pow(raio,2);
+}
+
+double raizComplexa (double operando, double *r1Real ,double *r1Imag) {
+	if (operando >= 0) {
+		*r1Real = sqrt(operando);
+		*r1Imag = 0;
+	}
+	else {
+		*r1Real = 0;
+		*r1Imag = sqrt(-1*operando);
+	}
 }
 // Calcula as duas raizes de uma equação quadrática
 void bhaskara(double a, double b, double c, double *r1Real, double *r1Imag, double *r2Real, double *r2Imag) {
@@ -253,8 +266,8 @@ int main(int argc, char *argv[])
 							break;
 						case 's':
 							sscanf(buf + 2, "%lf", operando);
-							result = sqrt(operando[0]);
-							sprintf(message, "%lf", result);
+							raizComplexa(operando[0], &r1Real, &r1Imag);
+							sprintf(message, "%lf|%lf", r1Real, r1Imag);
 							if (send(cSock, message, strlen(message), 0) == -1) {
 								imprimeErro("send()");
 							}

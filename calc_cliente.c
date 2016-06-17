@@ -175,8 +175,8 @@ int main(int argc, char *argv[])
                 if ((recv_len = recv(s,buf, sizeof(buf),0)) == -1) {
                     imprimeErro("recv");
                 }
-                sscanf(buf,"%lf",&r1);
-                printf("\nraiz quadrada de %.2lf = %.2lf\n", num1, r1);
+                sscanf(buf,"%lf%*c%lf",&r1Real, &r1Imag);
+                printf("\nraiz quadrada de %.2lf = %.2lf + %.2lf i\n", num1, r1Real, r1Imag);
             break;
 
             case '!':
@@ -191,7 +191,10 @@ int main(int argc, char *argv[])
                     imprimeErro("recv");
                 }
                 sscanf(buf,"%lf",&r1);
-                printf("\n%lf! = %lf\n", num1, r1);
+                if (r1 == 0) 
+                    printf("\n Operacao invalida para operandos negativos. (%lf!)\n", num1);
+                else 
+                    printf("\n%lf! = %lf\n", num1, r1);
             break;
             
 			case 'c':
